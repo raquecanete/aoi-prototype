@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sample Material Requests</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <main id="loginView" class="login-view">
+    <section class="login-brand-panel">
+      <img class="login-logo" src="assets/aoi-logo.png" alt="AOI Apparel One Indonesia">
+      <div class="login-brand-copy">
+        <p class="eyebrow">AOI MATERIALS</p>
+        <h1>Sample development workspace</h1>
+        <p>Manage styles, sample requests, and sample room activity in one place.</p>
+      </div>
+      <span class="login-footnote">INTERNAL OPERATIONS PORTAL</span>
+    </section>
+    <section class="login-form-panel">
+      <form id="loginForm" class="login-card">
+        <h2>Welcome back</h2>
+        <p class="login-intro">Sign in to continue to AOI Materials.</p>
+        <label class="login-label" for="loginUsername">Username</label>
+        <input id="loginUsername" name="username" class="login-input" type="text" autocomplete="username" required>
+        <label class="login-label" for="loginPassword">Password</label>
+        <input id="loginPassword" name="password" class="login-input" type="password" autocomplete="current-password" required>
+        <p id="loginError" class="login-error" role="alert" hidden>Username or password is incorrect.</p>
+        <button class="primary-btn login-submit" type="submit">Sign in <span>→</span></button>
+        <div class="demo-credentials">
+          <strong>Demo credentials</strong>
+          <div><span>Username</span><code>admin</code></div>
+          <div><span>Password</span><code>AOI2026!</code></div>
+          <small>Mock login for this demo only. No credentials are sent to a server.</small>
+        </div>
+      </form>
+    </section>
+  </main>
+  <div class="app-shell" id="appShell" hidden>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img class="brand-logo" src="assets/aoi-logo.png" alt="AOI Apparel One Indonesia">
+        <div class="brand-copy"><strong>Materials workspace</strong><span>Sample development</span></div>
+      </div>
+      <nav class="nav-list" id="navList">
+        <button data-route="dashboard" class="nav-item active"><span>▦</span>Dashboard</button>
+        <button data-route="styles" class="nav-item"><span>◈</span>Style Management</button>
+        <button data-route="requests" class="nav-item"><span>☷</span>Sample Request Management</button>
+        <button data-route="monitoring" class="nav-item"><span>◷</span>Sample Room Monitoring</button>
+        <button data-route="quality" class="nav-item"><span>✓</span>Data Quality</button>
+        <button data-route="export" class="nav-item"><span>⇩</span>Export</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="settingsButton" class="sidebar-action"><span>⚙</span>Settings</button>
+        <button id="signOut" class="sidebar-action signout-action" aria-label="Log out"><span>↪</span>Log out</button>
+        <div class="demo-badge"><span></span>Workspace empty</div>
+      </div>
+    </aside>
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="flex items-center gap-3">
+          <button id="mobileMenu" class="icon-btn lg:hidden" aria-label="Open menu">☰</button>
+          <div class="relative search-wrap">
+            <input id="globalSearch" class="search-input" placeholder="Search styles, requests, materials..." aria-label="Search all items">
+            <kbd>/</kbd>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="createRecord" class="select" disabled>＋ Create</button>
+          <button id="topImport" class="primary-btn">⇧ Import</button>
+        </div>
+      </header>
+      <div class="breadcrumbs" id="breadcrumbs"></div>
+      <main id="app" class="content"></main>
+    </div>
+    <div id="settingsModal" class="settings-backdrop" hidden>
+      <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
+        <header class="settings-header">
+          <div><p class="eyebrow">PREFERENCES</p><h2 id="settingsTitle">Settings</h2></div>
+          <button id="closeSettings" class="icon-btn" aria-label="Close settings">×</button>
+        </header>
+        <div class="settings-option">
+          <div><strong>Appearance</strong><span>Choose the display theme for this workspace.</span></div>
+          <label class="theme-switch" aria-label="Toggle dark theme">
+            <input id="themeToggle" type="checkbox">
+            <span class="theme-switch-track"></span>
+          </label>
+        </div>
+        <p id="themeState" class="theme-state">Light theme is active</p>
+      </section>
+    </div>
+  </div>
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true"></aside>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script src="js/state.js"></script>
+  <script src="js/workbook-parser.js"></script>
+  <script src="js/validate.js"></script>
+  <script src="js/import.js"></script>
+  <script src="js/drawer.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/sheet-table.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
