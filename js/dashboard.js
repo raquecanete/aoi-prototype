@@ -19,7 +19,7 @@ window.Dashboard=(()=>{
     const query=(document.getElementById('globalSearch')?.value||'').trim().toLocaleLowerCase();
     const result=AppState.data.sheets.map((sheet,index)=>{
       const rows=AppState.rowsFor(sheet);
-      const matches=rows.filter(row=>!query||row.values.some(value=>String(value??'').toLocaleLowerCase().includes(query))).length;
+      const matches=AppState.searchRows(sheet,query).length;
       return {sheet,index,rows,matches};
     }).filter(item=>!query||item.matches>0||item.sheet.name.toLocaleLowerCase().includes(query));
     document.getElementById('dashboardSearchSummary').textContent=query?`${result.reduce((sum,item)=>sum+item.matches,0)} matching rows across ${result.length} worksheets`:`${AppState.data.summary.rows} rows across ${AppState.data.sheets.length} worksheets`;

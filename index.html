@@ -66,8 +66,9 @@
         <div class="flex items-center gap-3">
           <button id="mobileMenu" class="icon-btn lg:hidden" aria-label="Open menu">☰</button>
           <div class="relative search-wrap">
-            <input id="globalSearch" class="search-input" placeholder="Search styles, requests, materials..." aria-label="Search all items">
+            <input id="globalSearch" class="search-input" placeholder="Search styles, requests, materials..." aria-label="Search all items" aria-autocomplete="list" aria-controls="searchSuggestions" aria-expanded="false">
             <kbd>/</kbd>
+            <div id="searchSuggestions" class="search-suggestions" role="listbox" aria-label="Search suggestions" hidden></div>
           </div>
         </div>
         <div class="flex items-center gap-2">

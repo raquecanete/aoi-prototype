@@ -173,6 +173,16 @@ window.AppState=(()=>{
     },[]);
   }
 
+  function searchRows(sheet,query){
+    const text=String(query??'').trim().toLocaleLowerCase();
+    const rows=rowsFor(sheet);
+    if(!text)return rows;
+    return rows.filter(row=>row.values.some((value,column)=>
+      String(value??'').toLocaleLowerCase().includes(text)||
+      displayCell(sheet,row.index,column).toLocaleLowerCase().includes(text)
+    ));
+  }
+
   function preambleFor(sheet){
     if(!sheet||sheet.headerRow<=0)return [];
     return sheet.matrix.slice(0,sheet.headerRow).reduce((rows,values,index)=>{
@@ -239,6 +249,7 @@ window.AppState=(()=>{
     updateRow,
     clearWorkbook,
     rowsFor,
+    searchRows,
     preambleFor,
     columnIndex,
     displayCell

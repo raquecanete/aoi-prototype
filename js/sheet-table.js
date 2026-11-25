@@ -196,10 +196,9 @@ window.SheetTable=(()=>{
     const columns=columnsFor(mode,sheet);
     const query=(document.getElementById('globalSearch')?.value||'').trim().toLocaleLowerCase();
     const brandIndex=sourceIndexFor(mode,sheet,'Brand'),seasonIndex=sourceIndexFor(mode,sheet,'Season');
-    let filtered=rows.filter(row=>
+    let filtered=AppState.searchRows(sheet,query).filter(row=>
       (brandIndex<0||!state.brand||String(row.values[brandIndex]??'').trim()===state.brand)&&
-      (seasonIndex<0||!state.season||String(row.values[seasonIndex]??'').trim()===state.season)&&
-      (!query||row.values.some(value=>String(value??'').toLocaleLowerCase().includes(query)))
+      (seasonIndex<0||!state.season||String(row.values[seasonIndex]??'').trim()===state.season)
     );
     if(state.sortIndex>=0){
       const sourceIndex=columns[state.sortIndex]?.sourceIndex??-1;
