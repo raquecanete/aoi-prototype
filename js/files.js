@@ -38,6 +38,7 @@ window.FilesView=(()=>{
       matchesFilter(file)&&file.name.toLocaleLowerCase().includes(searchText.toLocaleLowerCase())
     );
     return filtered.sort((a,b)=>{
+      if(Boolean(a.pinned)!==Boolean(b.pinned))return a.pinned?-1:1;
       if(sort==='name')return a.name.localeCompare(b.name,undefined,{sensitivity:'base'});
       if(sort==='size')return b.sizeBytes-a.sizeBytes;
       if(sort==='rows')return rowsForFile(b)-rowsForFile(a);
@@ -63,7 +64,7 @@ window.FilesView=(()=>{
           <div class="files-toolbar"><label class="files-search"><span class="sr-only">Search files</span><input id="filesSearch" class="filter-input" type="search" placeholder="Search by file name…" value="${esc(searchText)}"></label><label class="sr-only" for="filesSort">Sort files</label><select id="filesSort" class="select" aria-label="Sort files"><option value="recent">Recently used</option><option value="name">Name</option><option value="size">Size</option><option value="rows">Rows</option></select><div class="files-view-toggle" role="group" aria-label="File display"><button type="button" data-view="table" class="${activeView()==='table'?'selected':''}" aria-pressed="${activeView()==='table'}">List</button><button type="button" data-view="cards" class="${activeView()==='cards'?'selected':''}" aria-pressed="${activeView()==='cards'}">Cards</button></div></div>
         </div>
         <div class="files-filterbar" role="group" aria-label="Filter files">${renderFilters()}</div>
-        <div id="filesResults">${visible.length?renderFileRows(visible):renderEmptyState(files.length===0)}</div>
+        <div id="filesResults">${renderGroupedFiles(visible,files.length===0)}</div>
         <div class="storage-meter"><div class="storage-meter-copy"><strong>Browser storage</strong><span>${esc(storage)}</span></div><progress max="100" value="${estimate?.quota?Math.min(100,(estimate.usage/estimate.quota)*100):0}" aria-label="Browser storage usage"></progress></div>
       </section>
       `;
@@ -133,6 +134,16 @@ window.FilesView=(()=>{
     return `<div class="files-empty-state"><span class="empty-file-icon" aria-hidden="true">▤</span><strong>No workbooks yet</strong><span>Use the Import control in the top bar to add an Excel or CSV file.</span></div>`;
   }
 
+  function renderGroupedFiles(files,noFiles){
+    if(!files.length)return renderEmptyState(noFiles);
+    const pinned=files.filter(file=>file.pinned);
+    const unpinned=files.filter(file=>!file.pinned);
+    return `<div class="files-result-groups">
+      ${pinned.length?`<section class="files-result-group pinned-files-group" aria-labelledby="pinnedFilesHeading"><div class="file-group-heading"><h3 id="pinnedFilesHeading">Pinned files</h3><span>${pinned.length}</span></div>${renderFileRows(pinned)}</section>`:''}
+      ${unpinned.length?`<section class="files-result-group unpinned-files-group" aria-labelledby="unpinnedFilesHeading"><div class="file-group-heading"><h3 id="unpinnedFilesHeading">Unpinned files</h3><span>${unpinned.length}</span></div><div class="unpinned-files-scroll" role="region" aria-label="Unpinned files" tabindex="0">${renderFileRows(unpinned)}</div></section>`:''}
+    </div>`;
+  }
+
   function renderFileRows(files){
     if(activeView()==='cards'){
       return `<div class="files-card-grid">${files.map(file=>`<article class="file-library-card"><div class="file-card-top"><span class="file-type-mark">${fileType(file.originalFileName)}</span>${file.pinned?'<span class="pinned-label">Pinned</span>':''}</div><strong class="file-card-name" title="${esc(file.name)}">${esc(file.name)}</strong><span class="file-card-rows">${rowsForFile(file)} rows · ${file.rowCounts?.length||0} sheets</span><div class="file-card-meta"><span>Imported ${dateText(file.importedAt)}</span><span>Modified ${dateText(file.lastModifiedAt)}</span><span>Opened ${dateText(file.lastOpenedAt)}</span><span>${formatBytes(file.sizeBytes)}</span></div><div class="file-card-status"><span>v${file.currentVersion}</span><span class="file-status ${file.status==='Archived'?'archived':''}">${esc(file.status)}</span></div><div class="file-card-actions"><button type="button" class="file-open-button" data-file-action="open" data-id="${esc(file.id)}">Open workbook</button>${renderFileActions(file,false)}</div></article>`).join('')}</div>`;
@@ -189,7 +200,7 @@ window.FilesView=(()=>{
   async function renderResults(){
     const files=await AppState.listFiles();
     const visible=sortedFiles(files);
-    document.getElementById('filesResults').innerHTML=visible.length?renderFileRows(visible):renderEmptyState(files.length===0);
+    document.getElementById('filesResults').innerHTML=renderGroupedFiles(visible,files.length===0);
     document.getElementById('filesCount').textContent=`${visible.length} ${visible.length===1?'file':'files'}`;
     document.querySelectorAll('.files-filterbar [data-filter]').forEach(button=>{
       const selected=button.dataset.filter===filter;
