@@ -10,7 +10,8 @@ window.ExportView=(()=>{
     app.innerHTML=`<div class="page-heading"><div><p class="eyebrow">WORKBOOK DATA</p><h1>Export</h1><p class="page-subtitle">Export the complete imported workbook or an individual worksheet.</p></div></div>
     <div class="kpi-grid import-summary-grid mb-4"><div class="kpi card"><div class="kpi-value">${data.summary.sheets}</div><div class="kpi-label">Worksheets</div></div><div class="kpi card"><div class="kpi-value">${data.summary.rows}</div><div class="kpi-label">Data rows</div></div><div class="kpi card"><div class="kpi-value">${data.summary.columns}</div><div class="kpi-label">Columns</div></div></div>
     <section class="card export-panel"><div><h2>Complete workbook</h2><p>Includes every imported worksheet, row, column, cell value, and merged range.</p><button id="xlsxExport" class="primary-btn">Download full workbook (.xlsx)</button></div><div class="export-divider"></div><div><h2>Single worksheet</h2><p>Download one worksheet as CSV without changing the saved workbook.</p><div class="flex gap-2"><select id="csvSheet" class="select" aria-label="Worksheet to export">${data.sheets.map((sheet,index)=>`<option value="${index}">${esc(sheet.name)}</option>`).join('')}</select><button id="csvExport" class="select">Download CSV</button></div></div></section>`;
-    document.getElementById('xlsxExport').onclick=downloadWorkbook;
+    const xlsxButton=document.getElementById('xlsxExport');
+    if(xlsxButton)xlsxButton.onclick=downloadWorkbook;
     document.getElementById('csvExport').onclick=downloadCsv;
   }
   function worksheetForExport(sheet){
@@ -35,26 +36,46 @@ window.ExportView=(()=>{
     worksheet['!merges']=(sheet.merges||[]).map(range=>XLSX.utils.decode_range(range));
     return worksheet;
   }
-  function downloadWorkbook(){
+  function downloadWorkbookData(data,fileName='aoi-workbook-export.xlsx'){
     try{
+      AppState.requireAdmin();
       const workbook=XLSX.utils.book_new();
-      AppState.data.sheets.forEach(sheet=>XLSX.utils.book_append_sheet(workbook,worksheetForExport(sheet),sheet.name));
-      XLSX.writeFile(workbook,'aoi-workbook-export.xlsx');
+      data.sheets.forEach(sheet=>XLSX.utils.book_append_sheet(workbook,worksheetForExport(sheet),sheet.name));
+      XLSX.writeFile(workbook,fileName);
     }catch(error){
       App.toast(`Workbook export failed: ${error.message}`,'error');
     }
+  }
+  function downloadWorkbook(){
+    const name=AppState.activeFile?.name||'aoi-workbook-export';
+    downloadWorkbookData(AppState.data,`${name}.xlsx`);
+  }
+  function downloadCsvData(data,fileName='aoi-workbook-export.csv',sheetIndex){
+    if(!data.sheets.length){App.toast('This workbook has no worksheets to export.','error');return}
+    const indices=Number.isInteger(sheetIndex)?[sheetIndex]:data.sheets.map((_,index)=>index);
+    indices.forEach((index,downloadIndex)=>{
+      const sheet=data.sheets[index];
+      if(!sheet){App.toast('Choose a valid worksheet to export.','error');return}
+      const output=()=>{
+        try{
+          const workbook=XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook,worksheetForExport(sheet),sheet.name);
+          const base=fileName.replace(/\.csv$/i,'');
+          const outputName=indices.length===1?`${base}.csv`:`${base}-${sheet.name.replace(/[\\/:*?"<>|]/g,'_')}.csv`;
+          XLSX.writeFile(workbook,outputName,{bookType:'csv'});
+        }catch(error){
+          App.toast(`CSV export failed: ${error.message}`,'error');
+        }
+      };
+      if(downloadIndex===0)output();
+      else window.setTimeout(output,downloadIndex*250);
+    });
   }
   function downloadCsv(){
     const index=Number(document.getElementById('csvSheet').value);
     const sheet=AppState.data.sheets[index];
     if(!sheet){App.toast('Choose a valid worksheet to export.','error');return}
-    try{
-      const workbook=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook,worksheetForExport(sheet),sheet.name);
-      XLSX.writeFile(workbook,`${sheet.name}.csv`,{bookType:'csv'});
-    }catch(error){
-      App.toast(`CSV export failed: ${error.message}`,'error');
-    }
+    downloadCsvData({sheets:[sheet]},`${sheet.name}.csv`,0);
   }
-  return {render};
+  return {render,downloadWorkbookData,downloadCsvData};
 })();

@@ -5,12 +5,21 @@ window.App=(()=>{
     requests:{title:'Sample Request Management',render:()=>SheetTable.render('requests')},
     monitoring:{title:'Sample Room Monitoring',render:()=>SheetTable.render('monitoring')},
     quality:{title:'Data Quality',render:renderQuality},
+    files:{title:'Files',render:()=>FilesView.render()},
     export:{title:'Export',render:()=>ExportView.render()},
+    activity:{title:'Recent Activity',render:()=>FilesView.renderRecentActivity()},
     import:{title:'Import workbook',render:()=>ImportWizard.render()}
   };
   let route='dashboard';
   let searchTimer;
+  let switcherLabelLimit=null;
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+  function getSwitcherLabelLimit(){
+    if(window.matchMedia('(max-width: 420px)').matches)return 20;
+    if(window.matchMedia('(max-width: 760px)').matches)return 28;
+    if(window.matchMedia('(max-width: 1023px)').matches)return 36;
+    return Infinity;
+  }
   function renderSearchSuggestions(matches,query){
     const input=document.getElementById('globalSearch');
     const suggestions=document.getElementById('searchSuggestions');
@@ -45,7 +54,6 @@ window.App=(()=>{
     route=next;
     document.querySelectorAll('.nav-item').forEach(button=>button.classList.toggle('active',button.dataset.route===next));
     document.getElementById('breadcrumbs').textContent=`AOI Materials  /  ${routes[next].title}`;
-    document.getElementById('sidebar').classList.remove('open');
     const badge=document.querySelector('.demo-badge');
     badge.lastChild.textContent=AppState.data.sheets.length?'Workspace active':'Workspace empty';
     routes[next].render();
@@ -55,7 +63,83 @@ window.App=(()=>{
   }
   function updateCreateButton(){
     const create=document.getElementById('createRecord');
+    create.hidden=false;
     create.disabled=!AppState.data.sheets.some(sheet=>sheet.columnCount>0);
+    document.getElementById('topImport').hidden=false;
+    document.getElementById('saveWorkbook').hidden=!AppState.dirty;
+    document.getElementById('discardWorkbook').hidden=!AppState.dirty;
+  }
+  async function updateAppChrome(){
+    const files=await AppState.listFiles();
+    const recent=files.filter(file=>file.status!=='Archived').sort((a,b)=>{
+      const recentTime=file=>Math.max(Date.parse(file.lastOpenedAt||'')||0,Date.parse(file.lastModifiedAt||'')||0);
+      return recentTime(b)-recentTime(a);
+    }).slice(0,8);
+    const active=AppState.activeFile;
+    const control=document.getElementById('activeFileControl');
+    const switcher=document.getElementById('activeFileSwitcher');
+    const maxLength=getSwitcherLabelLimit();
+    switcherLabelLimit=maxLength;
+    const optionLabel=file=>{
+      const name=String(file.name||'');
+      const compactName=name.length>maxLength?`${name.slice(0,maxLength-1).trimEnd()}…`:name;
+      return `<option value="${esc(file.id)}" title="${esc(name)}">${esc(compactName)} · v${file.currentVersion}</option>`;
+    };
+    control.hidden=!active;
+    if(active){
+      switcher.innerHTML=recent.map(optionLabel).join('');
+      if(!recent.some(file=>file.id===active.id)){
+        switcher.insertAdjacentHTML('beforeend',optionLabel(active));
+      }
+      switcher.value=active.id;
+      switcher.title=active.name;
+      switcher.setAttribute('aria-label',`Switch active workbook. Current workbook: ${active.name}`);
+      document.getElementById('activeFileMeta').textContent=AppState.dirty?'• Unsaved changes':`v${active.currentVersion}`;
+    }
+    updateCreateButton();
+  }
+  function chooseUnsavedAction(){
+    const dialog=document.getElementById('unsavedDialog');
+    return new Promise(resolve=>{
+      let settled=false;
+      const finish=value=>{
+        if(settled)return;
+        settled=true;
+        dialog.hidden=true;
+        resolve(value);
+      };
+      document.getElementById('switchSave').onclick=()=>finish('save');
+      document.getElementById('switchDiscard').onclick=()=>finish('discard');
+      document.getElementById('switchCancel').onclick=()=>finish('cancel');
+      dialog.onclick=event=>{if(event.target===dialog)finish('cancel')};
+      dialog.hidden=false;
+      dialog.querySelector('.settings-dialog').focus();
+    });
+  }
+  async function switchFile(fileId,openDashboard=false){
+    if(fileId===AppState.activeFileId)return true;
+    try{
+      if(AppState.dirty){
+        const action=await chooseUnsavedAction();
+        if(action==='cancel')return false;
+        if(action==='save'){
+          const note=window.prompt('Optional note for this version:','');
+          if(note===null)return false;
+          await AppState.saveActive(note);
+        }else{
+          await AppState.discardActive();
+        }
+      }
+      await AppState.openFile(fileId);
+      await updateAppChrome();
+      if(openDashboard)navigate('dashboard');
+      else refresh();
+      return true;
+    }catch(error){
+      toast(`Could not open file: ${error.message}`,'error');
+      await updateAppChrome();
+      return false;
+    }
   }
   function activeSheetIndex(){
     if(['styles','requests','monitoring'].includes(route))return SheetTable.currentSheetIndex(route);
@@ -66,6 +150,7 @@ window.App=(()=>{
     routes[route].render();
     updateCreateButton();
     renderGlobalSearch();
+    updateAppChrome();
   }
   function toast(message,type='success'){
     const element=document.createElement('div');
@@ -113,7 +198,29 @@ window.App=(()=>{
   document.getElementById('navList').querySelectorAll('.nav-item').forEach(button=>button.onclick=()=>navigate(button.dataset.route));
   document.getElementById('topImport').onclick=()=>navigate('import');
   document.getElementById('createRecord').onclick=()=>Drawer.openCreate(activeSheetIndex());
-  document.getElementById('mobileMenu').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('activeFileSwitcher').onchange=event=>{
+    const target=event.target.value;
+    switchFile(target).then(opened=>{
+      if(!opened)event.target.value=AppState.activeFileId;
+    });
+  };
+  document.getElementById('saveWorkbook').onclick=async()=>{
+    const note=window.prompt('Optional note for this version:','');
+    if(note===null)return;
+    try{
+      await AppState.saveActive(note);
+      toast(`Saved ${AppState.activeFile.name} as version ${AppState.activeVersion.versionNo}`);
+      refresh();
+    }catch(error){toast(`Could not save changes: ${error.message}`,'error')}
+  };
+  document.getElementById('discardWorkbook').onclick=async()=>{
+    if(!window.confirm('Discard all unsaved changes to this file?'))return;
+    try{
+      await AppState.discardActive();
+      toast('Unsaved changes discarded.');
+      refresh();
+    }catch(error){toast(`Could not discard changes: ${error.message}`,'error')}
+  };
   const settingsModal=document.getElementById('settingsModal'),themeToggle=document.getElementById('themeToggle');
   function closeSettings(){settingsModal.hidden=true;document.getElementById('settingsButton').focus()}
   document.getElementById('settingsButton').onclick=()=>{
@@ -127,6 +234,10 @@ window.App=(()=>{
   themeToggle.onchange=()=>{
     document.body.classList.toggle('dark',themeToggle.checked);
     document.getElementById('themeState').textContent=themeToggle.checked?'Dark theme is active':'Light theme is active';
+    AOIDB.get('settings','uiPreferences').then(current=>{
+      const value={...(current?.value||{}),theme:themeToggle.checked?'dark':'light'};
+      return AOIDB.put('settings',{key:'uiPreferences',value});
+    }).catch(error=>toast(`Could not save appearance preference: ${error.message}`,'error'));
   };
   document.getElementById('globalSearch').addEventListener('input',()=>{
     clearTimeout(searchTimer);
@@ -168,12 +279,38 @@ window.App=(()=>{
       else document.getElementById('globalSearch').focus();
     }
   });
+  window.addEventListener('resize',()=>{
+    const nextLimit=getSwitcherLabelLimit();
+    if(nextLimit===switcherLabelLimit)return;
+    switcherLabelLimit=nextLimit;
+    updateAppChrome().catch(error=>toast(`Could not refresh the workbook switcher: ${error.message}`,'error'));
+  });
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&!settingsModal.hidden)closeSettings();
+    if(event.key==='Escape'&&!document.getElementById('unsavedDialog').hidden){
+      document.getElementById('unsavedDialog').hidden=true;
+    }
     if(event.key==='/'&&document.activeElement?.tagName!=='INPUT'){event.preventDefault();document.getElementById('globalSearch').focus()}
   });
-  AppState.ready.then(()=>navigate('dashboard')).catch(error=>{
+  window.addEventListener('appstate:change',()=>{
+    updateAppChrome().catch(error=>toast(`Could not refresh file status: ${error.message}`,'error'));
+    if(route==='files')FilesView.render();
+    if(route==='activity')FilesView.renderRecentActivity();
+  });
+  window.addEventListener('storage-warning',event=>{
+    const warning=document.getElementById('storageWarning');
+    warning.hidden=false;
+    if(event.detail?.message)warning.textContent=`Browser storage failed. Changes are kept in memory only: ${event.detail.message}`;
+  });
+  AppState.ready.then(async()=>{
+    const preferences=await AOIDB.get('settings','uiPreferences');
+    const dark=preferences?.value?.theme==='dark';
+    document.body.classList.toggle('dark',dark);
+    themeToggle.checked=dark;
+    document.getElementById('themeState').textContent=dark?'Dark theme is active':'Light theme is active';
+    navigate('dashboard');
+  }).catch(error=>{
     document.getElementById('app').innerHTML=`<section class="card storage-error"><strong>Workbook storage is unavailable</strong><p>${esc(error.message)}</p><p>Check browser storage permissions, then refresh the page.</p></section>`;
   });
-  return {navigate,toast,refresh};
+  return {navigate,toast,refresh,switchFile,openFile:fileId=>switchFile(fileId,true),updateAppChrome};
 })();

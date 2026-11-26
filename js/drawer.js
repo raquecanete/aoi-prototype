@@ -25,6 +25,7 @@ window.Drawer=(()=>{
     document.getElementById('drawerEdit').onclick=()=>openEdit(sheetIndex,rowIndex,displayColumns);
   }
   function openEdit(sheetIndex,rowIndex,displayColumns=null){
+    AppState.requireAdmin();
     const sheet=AppState.data.sheets[sheetIndex];
     if(!sheet||!Array.isArray(sheet.matrix[rowIndex]))return;
     const columns=displayColumns||sheet.headers.map((header,sourceIndex)=>({header,sourceIndex}));
@@ -54,6 +55,7 @@ window.Drawer=(()=>{
     saveButton.onclick=()=>saveEdit(sheetIndex,rowIndex,initialValues);
   }
   async function saveEdit(sheetIndex,rowIndex,initialValues){
+    AppState.requireAdmin();
     const drawer=document.getElementById('drawer');
     const changes={};
     const newColumns={};
@@ -79,6 +81,7 @@ window.Drawer=(()=>{
     }
   }
   function openCreate(initialSheetIndex=0){
+    AppState.requireAdmin();
     if(!AppState.data.sheets.length){
       App.toast('Import a workbook before creating a row.','error');
       return;

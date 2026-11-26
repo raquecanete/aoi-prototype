@@ -132,7 +132,7 @@ window.SheetTable=(()=>{
     const {sheet,index,state}=getSheet(mode);
     const rows=AppState.rowsFor(sheet);
     const preamble=AppState.preambleFor(sheet);
-    const preambleHtml=preamble.length?`<div class="sheet-preamble" aria-label="Worksheet report parameters">${preamble.map(row=>`<div class="sheet-preamble-row">${row.values.map((value,column)=>value===''||value===null||value===undefined?'':`<span class="sheet-preamble-cell">${esc(AppState.displayCell(sheet,row.index,column))}</span>`).join('')}</div>`).join('')}</div>`:'';
+    const preambleHtml=mode==='requests'&&preamble.length?`<div class="sheet-preamble" aria-label="Worksheet report parameters">${preamble.map(row=>`<div class="sheet-preamble-row">${row.values.map((value,column)=>value===''||value===null||value===undefined?'':`<span class="sheet-preamble-cell">${esc(AppState.displayCell(sheet,row.index,column))}</span>`).join('')}</div>`).join('')}</div>`:'';
     const brandIndex=sourceIndexFor(mode,sheet,'Brand');
     const seasonIndex=sourceIndexFor(mode,sheet,'Season');
     const brands=brandIndex<0?[]:uniqueValues(rows,brandIndex);
