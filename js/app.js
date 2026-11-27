@@ -2,7 +2,8 @@ window.App=(()=>{
   const routes={
     dashboard:{title:'Dashboard',render:()=>Dashboard.render()},
     styles:{title:'Style Management',render:()=>SheetTable.render('styles')},
-    requests:{title:'Sample Request Management',render:()=>SheetTable.render('requests')},
+    requests:{title:'Imported File',render:()=>SheetTable.render('requests')},
+    'sample-requests':{title:'Sample Request Management',render:()=>SampleRequests.render()},
     monitoring:{title:'Sample Room Monitoring',render:()=>SheetTable.render('monitoring')},
     quality:{title:'Data Quality',render:renderQuality},
     files:{title:'Files',render:()=>FilesView.render()},
@@ -63,7 +64,7 @@ window.App=(()=>{
   }
   function updateCreateButton(){
     const create=document.getElementById('createRecord');
-    create.hidden=false;
+    create.hidden=route==='sample-requests';
     create.disabled=!AppState.data.sheets.some(sheet=>sheet.columnCount>0);
     document.getElementById('topImport').hidden=false;
     document.getElementById('saveWorkbook').hidden=!AppState.dirty;

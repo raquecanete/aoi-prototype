@@ -417,5 +417,5 @@ window.ImportWizard=(()=>{
     return files;
   }
 
-  return {render,setUpdateTarget,initFiles,buildDiff,applyDiff};
+  return {render,setUpdateTarget,initFiles,buildDiff,applyDiff,parseFile};
 })();

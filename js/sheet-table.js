@@ -49,7 +49,7 @@ window.SheetTable=(()=>{
   };
   const views={
     styles:{title:'Style Management',description:'Browse every imported style record and all of its source columns.',suggest:/style/i},
-    requests:{title:'Sample Request Management',description:'Review and search rows from every worksheet in the imported workbook.',suggest:null},
+    requests:{title:'Imported File',description:'Browse, review, and search rows from every worksheet in the active workbook.',suggest:null},
     monitoring:{title:'Sample Room Monitoring',description:'Inspect all imported sample-room records and source fields.',suggest:/sample|monitor/i}
   };
   const states={};

@@ -5,36 +5,77 @@ window.Drawer=(()=>{
     RBU:['Football','Originals','Olympics','Teamsports','Denim','Running','Motorsports'],
     'Dev Type':['New','Carry-over']
   };
+  const staffFields=new Set(['Pattern Maker','CFT','IE/TSD']);
+  const staffHeaders=new Set([
+    'pattern maker','cft','ie tsd','merchandiser','user',
+    'staff','staff name','staff list','employee','employee name','employee list','full name','name'
+  ]);
+  const dateHeaders=new Set(['opd','buy-ready date','buy ready date','emc approval date','emc approval']);
+  const genderOptions=['Men','Women'];
+  const staffDefaults=['John','Ken','Renzie','James'];
+  const normalizeHeader=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  function workbookValues(headers){
+    const values=new Set();
+    AppState.data.sheets.forEach(sheet=>{
+      sheet.headers.forEach((header,column)=>{
+        if(!headers.has(normalizeHeader(header)))return;
+        AppState.rowsFor(sheet).forEach(row=>{
+          const value=String(AppState.displayCell(sheet,row.index,column)??'').trim();
+          if(value&&value!=='—')values.add(value);
+        });
+      });
+    });
+    return [...values].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+  }
+  function optionsFor(header){
+    if(header==='Gender')return genderOptions;
+    if(staffFields.has(header)){
+      return [...new Set([...staffDefaults,...workbookValues(staffHeaders)])]
+        .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'}));
+    }
+    return editOptions[header]||[];
+  }
+  function isDateField(header){
+    return dateHeaders.has(String(header??'').trim().toLowerCase());
+  }
   function editControl(header,sourceIndex,value){
     const binding=sourceIndex<0?`data-new-column="${esc(header)}"`:`data-edit-column="${sourceIndex}"`;
-    const options=editOptions[header];
-    if(!options)return `<input class="filter-input" ${binding} value="${esc(value)}">`;
-    const choices=value&&!options.includes(value)?[value,...options]:options;
-    return `<select class="select" ${binding}><option value="" ${value===''?'selected':''}>Select…</option>${choices.map(option=>`<option value="${esc(option)}" ${value===option?'selected':''}>${esc(option)}</option>`).join('')}</select>`;
+    if(isDateField(header))return `<input class="filter-input" type="date" ${binding} value="${esc(value)}">`;
+    const isSelect=header==='Gender'||staffFields.has(header)||editOptions[header];
+    if(!isSelect)return `<input class="filter-input" ${binding} value="${esc(value)}">`;
+    const options=optionsFor(header);
+    const hasUnsupportedGender=header==='Gender'&&value&&!options.includes(value);
+    const choices=value&&!options.includes(value)&&header!=='Gender'?[value,...options]:options;
+    return `<select class="select" ${binding}><option value="" ${value===''?'selected':''}>Select…</option>${hasUnsupportedGender?`<option value="${esc(value)}" selected disabled>Current: ${esc(value)}</option>`:''}${choices.map(option=>`<option value="${esc(option)}" ${value===option?'selected':''}>${esc(option)}</option>`).join('')}</select>`;
   }
   function open(sheetIndex,rowIndex,displayColumns=null){
     const sheet=AppState.data.sheets[sheetIndex],row=AppState.rowsFor(sheet).find(item=>item.index===rowIndex);
     if(!sheet||!row)return;
     const fields=displayColumns
-      ?displayColumns.map(({header,sourceIndex})=>({header,value:sourceIndex<0?'—':AppState.displayCell(sheet,row.index,sourceIndex)}))
+      ?displayColumns.map(({header,sourceIndex,displayValue})=>({header,value:displayValue??(sourceIndex<0?'—':AppState.displayCell(sheet,row.index,sourceIndex))}))
       :sheet.headers.map((header,column)=>({header:header||'—',value:AppState.displayCell(sheet,row.index,column)}));
     const drawer=document.getElementById('drawer');
-    drawer.innerHTML=`<div class="drawer-head"><div><div class="font-semibold">${esc(sheet.name)}</div><div class="text-xs text-slate-500">Source row ${row.sourceRow}</div></div><div class="drawer-head-actions"><button id="drawerEdit" class="select">Edit row</button><button id="drawerClose" class="icon-btn" aria-label="Close row details">×</button></div></div><div class="drawer-body">${fields.map(({header,value})=>`<div class="field-grid"><div class="field-label">${esc(header||'—')}</div><div class="field-value">${esc(value)}</div></div>`).join('')}</div>`;
+    const editButton=AppState.currentUser?.role==='admin'?'<button id="drawerEdit" class="select">Edit row</button>':'';
+    drawer.innerHTML=`<div class="drawer-head"><div><div class="font-semibold">${esc(sheet.name)}</div><div class="text-xs text-slate-500">Source row ${row.sourceRow}</div></div><div class="drawer-head-actions">${editButton}<button id="drawerClose" class="icon-btn" aria-label="Close row details">×</button></div></div><div class="drawer-body">${fields.map(({header,value})=>`<div class="field-grid"><div class="field-label">${esc(header||'—')}</div><div class="field-value">${esc(value)}</div></div>`).join('')}</div>`;
     drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');document.getElementById('drawerBackdrop').classList.add('open');
     document.getElementById('drawerClose').onclick=close;
-    document.getElementById('drawerEdit').onclick=()=>openEdit(sheetIndex,rowIndex,displayColumns);
+    document.getElementById('drawerEdit')?.addEventListener('click',()=>openEdit(sheetIndex,rowIndex,displayColumns));
   }
   function openEdit(sheetIndex,rowIndex,displayColumns=null){
     AppState.requireAdmin();
     const sheet=AppState.data.sheets[sheetIndex];
     if(!sheet||!Array.isArray(sheet.matrix[rowIndex]))return;
     const columns=displayColumns||sheet.headers.map((header,sourceIndex)=>({header,sourceIndex}));
-    const description=displayColumns
-      ?'Blank fields are editable. A source column is added when you save a value for a field not in the workbook.'
-      :'Update any source column. Changes are saved to this workbook.';
-    const initialValues=sheet.headers.map((_,column)=>{
+    const hasNewColumns=Boolean(displayColumns?.some(({sourceIndex})=>sourceIndex<0));
+    const description=!displayColumns
+      ?'Update any source column. Changes are saved to this workbook.'
+      :hasNewColumns
+        ?'Blank fields are editable. A source column is added when you save a value for a field not in the workbook.'
+        :'Edit the displayed source fields only. Other workbook columns are unchanged.';
+    const initialValues=sheet.headers.map((header,column)=>{
       const value=sheet.matrix[rowIndex][column];
-      return value===undefined||value===null||value===''?'':AppState.displayCell(sheet,rowIndex,column);
+      if(value===undefined||value===null||value==='')return '';
+      return isDateField(header)?AppState.formatDateValue(value)||'':AppState.displayCell(sheet,rowIndex,column);
     });
     const drawer=document.getElementById('drawer');
     drawer.innerHTML=`<div class="drawer-head"><div><div class="font-semibold">Edit row · ${esc(sheet.name)}</div><div class="text-xs text-slate-500">${esc(description)}</div></div><button id="drawerClose" class="icon-btn" aria-label="Close row editor">×</button></div><div class="drawer-body"><div class="edit-row-form">${columns.map(({header,sourceIndex})=>{const value=sourceIndex<0?'':initialValues[sourceIndex];return `<label class="edit-row-field"><span>${esc(header||`Column ${sourceIndex+1}`)}</span>${editControl(header||`Column ${sourceIndex+1}`,sourceIndex,value)}</label>`}).join('')}</div><div class="create-row-actions"><button id="editCancel" class="select">Cancel</button><button id="editSave" class="primary-btn">Save changes</button></div></div>`;

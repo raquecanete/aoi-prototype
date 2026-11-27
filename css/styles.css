@@ -4627,3 +4627,110 @@ body.dark .import-no-errors {
     max-height: min(55vh, 480px);
   }
 }
+
+.sample-request-import-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sample-request-import-status {
+  margin: -10px 0 16px;
+  color: var(--text-muted);
+  font-size: var(--text-14);
+}
+
+.sample-request-import-status.is-error {
+  color: var(--error);
+}
+
+.sample-request-table-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.sample-request-table-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.sample-request-import-actions {
+  justify-content: flex-start;
+}
+
+.sample-request-table-summary span {
+  color: var(--text-muted);
+}
+
+.sample-request-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 16px 14px;
+}
+
+.sample-request-filter-field {
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sample-request-filter-field .select {
+  width: 100%;
+}
+
+.sample-request-table-scroll {
+  max-height: calc(100vh - 300px);
+}
+
+.sample-requests-table {
+  min-width: 1500px;
+}
+
+.sample-requests-table th {
+  min-width: 100px;
+}
+
+.sample-requests-table td {
+  max-width: 240px;
+}
+
+.sample-requests-table .sample-request-no-matches {
+  padding: 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sample-requests-table tbody tr.sample-request-record {
+  cursor: pointer;
+}
+
+.sample-requests-table tbody tr.sample-request-record:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+@media (max-width: 760px) {
+  .sample-request-table-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 12px 14px;
+  }
+
+  .sample-request-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sample-request-table-scroll {
+    max-height: calc(100vh - 250px);
+  }
+}

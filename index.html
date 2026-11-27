@@ -22,6 +22,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/style-management.css">
 </head>
 <body class="bg-slate-50 text-slate-900">
   <main id="loginView" class="login-view">
@@ -68,7 +69,7 @@
       <div class="sidebar-top">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 1 47 47 24 31 1 47Z"/></svg></span>
-          <div class="brand-copy sidebar-label"><strong>One Apparel Indonesia</strong><span>Materials workspace</span></div>
+          <div class="brand-copy sidebar-label"><strong>Apparel One Indonesia</strong><span>Materials workspace</span></div>
         </div>
         <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-expanded="true" aria-controls="sidebar" aria-label="Collapse sidebar">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
@@ -76,8 +77,9 @@
       </div>
       <nav class="nav-list" id="navList">
         <button data-route="dashboard" class="nav-item active" aria-label="Dashboard" data-tooltip="Dashboard"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label sidebar-label">Dashboard</span></button>
+        <button data-route="requests" class="nav-item" aria-label="Imported File" data-tooltip="Imported File"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label sidebar-label">Imported File</span></button>
         <button data-route="styles" class="nav-item" aria-label="Style Management" data-tooltip="Style Management"><span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label sidebar-label">Style Management</span></button>
-        <button data-route="requests" class="nav-item" aria-label="Sample Request Management" data-tooltip="Sample Request Management"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label sidebar-label">Sample Request Management</span></button>
+        <button data-route="sample-requests" class="nav-item" aria-label="Sample Request Management" data-tooltip="Sample Request Management"><span class="nav-icon" aria-hidden="true">☷</span><span class="nav-label sidebar-label">Sample Request Management</span></button>
         <button data-route="monitoring" class="nav-item" aria-label="Sample Room Monitoring" data-tooltip="Sample Room Monitoring"><span class="nav-icon" aria-hidden="true">◷</span><span class="nav-label sidebar-label">Sample Room Monitoring</span></button>
         <div class="nav-divider" role="separator" aria-orientation="horizontal"></div>
         <button data-route="files" class="nav-item" aria-label="Files" data-tooltip="Files"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label sidebar-label">Files</span></button>
@@ -161,9 +163,11 @@
   <script src="js/drawer.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/sheet-table.js"></script>
+  <script src="js/sample-requests.js"></script>
   <script src="js/export.js"></script>
   <script src="js/files.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/style-management.js"></script>
   <script src="js/login.js"></script>
 </body>
 </html>

@@ -2,6 +2,16 @@ window.AppState=(()=>{
   const USERS={
     admin:{id:'admin',name:'Admin',role:'admin'}
   };
+  const fieldPlaceholders={
+    gender:'dropdown male female',
+    'pattern maker':'staff',
+    cft:'staff',
+    'ie tsd':'staff',
+    opd:'calendar format',
+    'buy ready date':'date format',
+    'emc approval date':'date format',
+    'emc approval':'date format'
+  };
   const emptyData=()=>({fileName:'',importedAt:'',sheets:[],parseErrors:[],summary:null});
   let data=emptyData();
   let activeFile=null;
@@ -239,7 +249,8 @@ window.AppState=(()=>{
     const userSetting=await AOIDB.get('settings','currentUser');
     if(userSetting?.value&&USERS[userSetting.value.id])currentUser=USERS[userSetting.value.id];
     let files=await listFiles();
-    if(!files.length){
+    const seedSetting=await AOIDB.get('settings','initialLibrarySeeded');
+    if(!files.length&&!seedSetting?.value){
       let legacy=null;
       try{legacy=await readLegacyWorkbook()}catch(error){legacy=null}
       if(legacy?.sheets?.length){
@@ -252,11 +263,22 @@ window.AppState=(()=>{
           note:'Bundled CSI and MO sample data'
         });
       }
+      await AOIDB.put('settings',{key:'initialLibrarySeeded',value:true});
       files=await listFiles();
+    }else if(files.length&&!seedSetting?.value){
+      await AOIDB.put('settings',{key:'initialLibrarySeeded',value:true});
     }
     const selected=await AOIDB.get('settings','activeFileId');
-    const activeId=files.some(file=>file.id===selected?.value)?selected.value:files[0].id;
-    await loadFile(activeId);
+    if(files.length){
+      const activeId=files.some(file=>file.id===selected?.value)?selected.value:files[0].id;
+      await loadFile(activeId);
+    }else{
+      activeFile=null;
+      activeVersion=null;
+      data=emptyData();
+      dirty=false;
+      await AOIDB.delete('settings','activeFileId');
+    }
     await AOIDB.put('settings',{key:'currentUser',value:currentUser});
     return data;
   }
@@ -463,7 +485,6 @@ window.AppState=(()=>{
     requireAdmin();
     if(dirty&&activeFile?.id===fileId)throw new Error('Save or discard unsaved changes before deleting the active file.');
     const files=await listFiles();
-    if(files.length<=1)throw new Error('Keep at least one file in the library.');
     const file=files.find(item=>item.id===fileId);
     if(!file)throw new Error('This file is no longer available.');
     for(const version of await versionsFor(fileId))await AOIDB.delete('versions',version.id);
@@ -472,7 +493,18 @@ window.AppState=(()=>{
     await addAudit('Deleted',file.name);
     if(activeFile?.id===fileId){
       const next=files.find(item=>item.id!==fileId);
-      await loadFile(next.id,{restoreDraft:false});
+      if(next){
+        await loadFile(next.id,{restoreDraft:false});
+      }else{
+        window.clearTimeout(draftTimer);
+        draftTimer=null;
+        activeFile=null;
+        activeVersion=null;
+        data=emptyData();
+        dirty=false;
+        await AOIDB.delete('settings','activeFileId');
+        emitChange();
+      }
     }
   }
 
@@ -523,7 +555,14 @@ window.AppState=(()=>{
     const meta=sheet.cellMeta?.[rowIndex]?.[columnIndex];
     if(meta?.error)return meta.error;
     const header=String(sheet.headers?.[columnIndex]||'').trim().toLocaleLowerCase();
-    if(['date promised','date start schedule','date finish schedule','date finished schedule','last updated bom'].includes(header)){
+    const placeholder=fieldPlaceholders[header.replace(/[^a-z0-9]+/g,' ').trim()];
+    const normalizedValue=String(value).trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    if(placeholder&&normalizedValue===placeholder)return '';
+    if(['date promised','date start schedule','date finish schedule','date finished schedule','last updated bom',
+      'opd','buy-ready date','buy ready date','emc approval date','emc approval',
+      'mo created','mo created date','created date','date created',
+      'mo updated','mo updated date','updated date','date updated',
+      'tgl mo completed','tanggal mo completed','mo completed date','date mo completed'].includes(header)){
       const date=formatDateValue(value);
       if(date){
         const parts=date.split('-').map(Number);
