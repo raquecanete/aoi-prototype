@@ -54,28 +54,6 @@ window.AppState=(()=>{
     };
   }
 
-  function seedWorkbook(){
-    const csiHeaders=['Season','Brand','Style Number','Style Name','Sample Type','Color Code','Status','Date Promised','Notes'];
-    const moHeaders=['Document No.','Part No.','Code Raw Material','Material','Color Code Raw Material','Cons','FBC','PO','Status'];
-    const data=updateSummary({
-      fileName:'Sample - CSI MO AH27.xlsx',
-      importedAt:new Date().toISOString(),
-      parseErrors:[],
-      sheets:[
-        seedSheet('CSI',csiHeaders,[
-          ['AH27','AOI','0004821','Essential Jersey Tee','Fit Sample','0012','In Progress','2026-12-15','Demo sample record'],
-          ['AH27','AOI','0005170','Lightweight Training Short','Size Set','0004','Pending','2026-12-22','Demo sample record']
-        ]),
-        seedSheet('MO',moHeaders,[
-          ['MO-270001','0004821','00001001','Cotton Jersey 180 GSM','0012',1.125,0.875,'#N/A','Open'],
-          ['MO-270001','0004821','00002008','Polyester Sewing Thread','0001',0.035,0.025,'001234567','Open'],
-          ['MO-270002','0005170','00001044','Recycled Polyester Interlock','0004',0.940,0.720,'001234568','Pending']
-        ])
-      ]
-    });
-    return data;
-  }
-
   function requireAdmin(){
     if(currentUser.role!=='admin')throw new Error('Admin permissions are required for this action.');
   }
@@ -249,25 +227,28 @@ window.AppState=(()=>{
     const userSetting=await AOIDB.get('settings','currentUser');
     if(userSetting?.value&&USERS[userSetting.value.id])currentUser=USERS[userSetting.value.id];
     let files=await listFiles();
+    const bundledNames=new Set(['Sample - CSI MO AH27','Demo - Multi-Article Styles']);
+    const bundledFiles=files.filter(file=>bundledNames.has(file.name)||bundledNames.has(file.originalFileName)||file.demoData===true||(file.importedBy==='system'&&bundledNames.has(file.originalFileName)));
+    for(const file of bundledFiles){
+      for(const version of await versionsFor(file.id))await AOIDB.delete('versions',version.id);
+      await AOIDB.delete('drafts',file.id);
+      await AOIDB.delete('files',file.id);
+    }
+    if(bundledFiles.length)await AOIDB.delete('settings','activeFileId');
+    await AOIDB.put('settings',{key:'multiArticleStylesDemoSeeded',value:true});
+    files=files.filter(file=>!bundledFiles.some(bundled=>bundled.id===file.id));
     const seedSetting=await AOIDB.get('settings','initialLibrarySeeded');
     if(!files.length&&!seedSetting?.value){
       let legacy=null;
       try{legacy=await readLegacyWorkbook()}catch(error){legacy=null}
       if(legacy?.sheets?.length){
         await writeNewFile(legacy,{name:legacy.fileName,originalFileName:legacy.fileName,note:'Migrated from saved workbook'});
-      }else{
-        await writeNewFile(seedWorkbook(),{
-          name:'Sample - CSI MO AH27',
-          originalFileName:'Sample - CSI MO AH27.xlsx',
-          importedBy:'system',
-          note:'Bundled CSI and MO sample data'
-        });
       }
-      await AOIDB.put('settings',{key:'initialLibrarySeeded',value:true});
       files=await listFiles();
     }else if(files.length&&!seedSetting?.value){
       await AOIDB.put('settings',{key:'initialLibrarySeeded',value:true});
     }
+    await AOIDB.put('settings',{key:'initialLibrarySeeded',value:true});
     const selected=await AOIDB.get('settings','activeFileId');
     if(files.length){
       const activeId=files.some(file=>file.id===selected?.value)?selected.value:files[0].id;

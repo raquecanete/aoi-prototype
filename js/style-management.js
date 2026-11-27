@@ -462,7 +462,7 @@ window.StyleManagement=(()=>{
     }).join('');
     const range=count?`${(state.page-1)*state.pageSize+1}-${Math.min(state.page*state.pageSize,count)} of ${count} styles`:'0 styles';
     const pagePanel=isBundledWorkbook()
-      ?'<section class="card style-empty-state"><strong>Import or select your CSI workbook</strong><span>Style Management only displays rows from an imported CSI workbook. The active workbook is bundled sample/demo data.</span></section>'
+      ?'<section class="card style-empty-state"><strong>Import or select your CSI workbook</strong><span>Style Management only displays rows from a real imported CSI workbook.</span></section>'
       :model.csiIndex<0
       ?'<section class="card style-empty-state"><strong>No CSI style data found</strong><span>Open a workbook with a CSI sheet containing Style and Article Number columns.</span></section>'
       :`<section class="card style-table-panel" aria-label="Styles">
@@ -1139,71 +1139,6 @@ window.StyleManagement=(()=>{
     App.navigate('styles');
   }
 
-  function demoWorkbook(){
-    const csiHeaders=['Style','Article Number','Season','User','Product Category','Document No','Part No','Code Raw Material','Material','Supplier Name','Cons','UOM','FBC','Ordered Qty','Qty Delivered','Balance ORI','PO','Status Sample','Product FG','Date Promised','Date Start Schedule','Date Finish Schedule','Last Updated BOM'];
-    const moHeaders=['Finish Goods Code','MO','Qty Keeping','Qty Shipment','Qty Total','Date Ordered','Date Promised','Start','Finish','Status Sample'];
-    const articles=[
-      {article:'01 Demo Navy-Electro Royal Blue / Inline Product',fg:'FG-DEMO-794213-01',part:'000000101',mo:['MO/DEMO/1099580','MO/DEMO/1099581']},
-      {article:'02 Demo Bright Red / Inline Product',fg:'FG-DEMO-794213-02',part:'000000102',mo:['MO/DEMO/1099582']},
-      {article:'03 Demo White-Black / Inline Product',fg:'FG-DEMO-794213-03',part:'000000103',mo:['MO/DEMO/1099583']},
-      {article:'04 Demo Green-Volt / Inline Product',fg:'FG-DEMO-794213-04',part:'000000104',mo:['MO/DEMO/1099584']}
-    ];
-    const materials=[
-      ['00001001','Cotton Jersey 180 GSM','AOI Textiles',1.125,'KG'],
-      ['00002008','Polyester Sewing Thread','Indo Thread',0.035,'CONE'],
-      ['00003012','Printed Size Label','Label Works',1,'PCS']
-    ];
-    const csiRows=[];
-    const moRows=[];
-    articles.forEach((article,articleIndex)=>{
-      materials.forEach((material,lineIndex)=>{
-        csiRows.push([
-          'DEMO-STYLE-001',article.article,'AH27','John','Demo Performance Top',
-          `DOC-DEMO-${String(articleIndex+1).padStart(2,'0')}`,article.part,material[0],material[1],material[2],
-          material[3],material[4],String(0.875+lineIndex/10),String(24+lineIndex*4),'0',String(24+lineIndex*4),
-          `PO-DEMO-${articleIndex+1}`,articleIndex%2?'SEALING':'GARMENT TEST',article.fg,
-          '2026-09-10','2026-08-01','2026-08-20','2026-07-28'
-        ]);
-      });
-      article.mo.forEach((mo,index)=>{
-        moRows.push([article.fg,mo,'24','0','24','2026-07-25','2026-09-10','2026-08-01','2026-08-20',articleIndex%2?'SEALING':'GARMENT TEST']);
-      });
-    });
-    const makeSheet=(name,headers,rows)=>{
-      const matrix=[headers,...rows];
-      return {
-        name,headers:[...headers],matrix,cellMeta:matrix.map(row=>row.map(()=>null)),merges:[],
-        startRow:0,endRow:matrix.length-1,startColumn:0,endColumn:headers.length-1,
-        headerRow:0,rowCount:rows.length,columnCount:headers.length
-      };
-    };
-    return {
-      fileName:'Demo - Multi-Article Styles.xlsx',importedAt:new Date().toISOString(),parseErrors:[],
-      sheets:[makeSheet('CSI',csiHeaders,csiRows),makeSheet('MO',moHeaders,moRows)],
-      summary:{sheets:2,rows:csiRows.length+moRows.length,columns:csiHeaders.length+moHeaders.length}
-    };
-  }
-
-  async function seedDemoFile(){
-    const setting=await AOIDB.get('settings','multiArticleStylesDemoSeeded');
-    if(setting?.value)return;
-    const files=await AppState.listFiles();
-    const existing=files.find(file=>file.name==='Demo - Multi-Article Styles');
-    if(!existing){
-      const created=await AppState.createFile(demoWorkbook(),{
-        name:'Demo - Multi-Article Styles',
-        originalFileName:'Demo - Multi-Article Styles.xlsx',
-        note:'Multi-article style detail demonstration',
-        importedBy:'system',
-        open:false
-      });
-      await AOIDB.put('files',{...created,demoData:true});
-    }else if(!existing.demoData){
-      await AOIDB.put('files',{...existing,demoData:true});
-    }
-    await AOIDB.put('settings',{key:'multiArticleStylesDemoSeeded',value:true});
-  }
-
   async function addDemoBadges(){
     const demoFiles=(await AppState.listFiles()).filter(file=>file.demoData);
     const actions=[...document.querySelectorAll('[data-id]')];
@@ -1296,10 +1231,7 @@ window.StyleManagement=(()=>{
     });
     AppState.ready.then(async()=>{
       activeFileId=AppState.activeFileId;
-      try{
-        await seedDemoFile();
-        await App.updateAppChrome();
-      }catch(error){App.toast(`Could not create the multi-article demo file: ${error.message}`,'error')}
+      await App.updateAppChrome();
       openFromHash();
     });
     const oldIssues=Validate.issues,oldSummary=Validate.summary;

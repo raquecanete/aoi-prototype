@@ -58,8 +58,6 @@ window.App=(()=>{
     route=next;
     document.querySelectorAll('.nav-item').forEach(button=>button.classList.toggle('active',button.dataset.route===next));
     document.getElementById('breadcrumbs').textContent=`AOI Materials  /  ${routes[next].title}`;
-    const badge=document.querySelector('.demo-badge');
-    badge.lastChild.textContent=AppState.data.sheets.length?'Workspace active':'Workspace empty';
     routes[next].render();
     updateCreateButton();
     renderGlobalSearch();
