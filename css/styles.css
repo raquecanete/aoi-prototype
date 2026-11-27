@@ -266,10 +266,10 @@ button, select, input, textarea, summary {
   place-items: center;
 }
 
-.brand-mark svg {
+.brand-mark-image {
   width: 32px;
   height: 32px;
-  fill: #ef3f32;
+  object-fit: contain;
 }
 
 .brand-copy {
@@ -1590,11 +1590,9 @@ select.select {
 .login-logo {
   position: relative;
   z-index: 1;
-  width: 148px;
-  height: 104px;
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  background: #fff;
+  display: block;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
   object-position: left center;
 }
@@ -2141,8 +2139,7 @@ body.dark .drawer-head {
   background: var(--surface);
 }
 
-body.dark .brand-logo,
-body.dark .login-logo {
+body.dark .brand-logo {
   background: #fff;
 }
 
@@ -2225,8 +2222,8 @@ body.dark .import-no-errors {
   }
 
   .login-logo {
-    width: 124px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
   }
 
   .login-brand-copy {

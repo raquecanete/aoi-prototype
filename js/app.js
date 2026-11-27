@@ -1,10 +1,13 @@
 window.App=(()=>{
+  function renderMonitoringPlaceholder(){
+    document.getElementById('app').innerHTML=`<div class="page-heading"><div><p class="eyebrow">IN PROGRESS</p><h1>Sample Room Monitoring</h1></div></div><section class="card empty-export" role="status"><strong>This page is still being developed.</strong></section>`;
+  }
   const routes={
     dashboard:{title:'Dashboard',render:()=>Dashboard.render()},
     styles:{title:'Style Management',render:()=>SheetTable.render('styles')},
     requests:{title:'Imported File',render:()=>SheetTable.render('requests')},
     'sample-requests':{title:'Sample Request Management',render:()=>SampleRequests.render()},
-    monitoring:{title:'Sample Room Monitoring',render:()=>SheetTable.render('monitoring')},
+    monitoring:{title:'Sample Room Monitoring',render:renderMonitoringPlaceholder},
     quality:{title:'Data Quality',render:renderQuality},
     files:{title:'Files',render:()=>FilesView.render()},
     export:{title:'Export',render:()=>ExportView.render()},
@@ -64,7 +67,7 @@ window.App=(()=>{
   }
   function updateCreateButton(){
     const create=document.getElementById('createRecord');
-    create.hidden=route==='sample-requests';
+    create.hidden=route==='sample-requests'||route==='monitoring';
     create.disabled=!AppState.data.sheets.some(sheet=>sheet.columnCount>0);
     document.getElementById('topImport').hidden=false;
     document.getElementById('saveWorkbook').hidden=!AppState.dirty;
@@ -245,7 +248,6 @@ window.App=(()=>{
     if(route==='dashboard')Dashboard.search();
     if(route==='styles')SheetTable.search('styles');
     if(route==='requests')SheetTable.search('requests');
-    if(route==='monitoring')SheetTable.search('monitoring');
     if(route==='quality')renderQuality();
     searchTimer=setTimeout(renderGlobalSearch,180);
   });
